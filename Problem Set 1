@@ -1,0 +1,402 @@
+# Install necessary libraries (if not installed)
+!pip install numpy matplotlib --quiet
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# === Question 1 ===
+alpha0, alpha1, alpha2 = 0, 0.6, 0.3
+beta0, beta1, beta2, beta3 = 0, 0.7, 0.2, 0.4
+sigma_e, sigma_v = 1, 1
+
+# Define the covariance matrix for the error terms
+Sigma = np.array([[sigma_e**2, 0], [0, sigma_v**2]])
+
+# For
+A = np.array([
+    [alpha1, alpha2, 0],
+    [beta3, beta1, beta2],
+    [0, 1, 0]
+])
+
+C = np.array([
+    [1, 0],
+    [0, 1],
+    [0, 0]
+])
+
+# === We have: ===
+T = 50  # Number of time steps
+y = np.zeros(T)  # Output variable y_t
+c = np.zeros(T)  # Consumption variable c_t
+c_prev = 0  # c_{t-2}
+
+# The random shocks follow as (epsilon and nu) following N(0, Sigma)
+np.random.seed(42)  # For reproducibility
+epsilon = np.random.normal(0, sigma_e, T)
+nu = np.random.normal(0, sigma_v, T)
+
+
+for t in range(1, T):
+    y[t] = alpha1 * y[t-1] + alpha2 * c[t-1] + epsilon[t]
+    c[t] = beta1 * c[t-1] + beta2 * c_prev + beta3 * y[t-1] + nu[t]
+    c_prev = c[t-1]  # Update c_{t-2} for next iteration
+
+# === Finally, we have ===
+plt.figure(figsize=(10, 5))
+plt.plot(y, label="y_t (Output)", marker='o', linestyle='--')
+plt.plot(c, label="c_t (Consumption)", marker='s', linestyle='-')
+plt.xlabel("Time")
+plt.ylabel("Value")
+plt.title("Time Series Simulation of y_t and c_t")
+plt.legend()
+plt.grid()
+
+# Save the plot for LaTeX reports
+plt.savefig("timeseries_plot.png", dpi=300)
+plt.show()
+
+print("Question 1")
+print (1)
+
+print("Matrix A:")
+print(A)
+
+print("\nMatrix C:")
+print(C)
+
+print("\nCovariance Matrix Sigma:")
+print(Sigma)
+
+import numpy as np
+import matplotlib.pyplot as plt
+import networkx as nx
+
+print ("Question 2")
+print (2)
+
+# (a) Define the transition matrix for borrower classification
+# Each row represents the probability of moving between categories: Subprime, Average, and Prime
+P = np.array([[0.90, 0.10, 0.00],  # Subprime: 90% stay, 10% move to Average, 0% move to Prime
+              [0.20, 0.65, 0.15],  # Average: 20% drop to Subprime, 65% stay, 15% move to Prime
+              [0.05, 0.10, 0.85]]) # Prime: 5% drop to Subprime, 10% move to Average, 85% stay
+
+# Check if each row sums to 1 (a valid transition matrix must have row sums = 1)
+row_sums = P.sum(axis=1)
+print("Transition Matrix P:")
+print(P)
+print("\nRow sums (should be 1):", row_sums)
+
+# (b) Visualizing the Markov Chain
+
+states = ["Subprime", "Average", "Prime"]
+
+
+G = nx.DiGraph()
+for i in range(len(states)):
+    for j in range(len(states)):
+        if P[i, j] > 0:  # Only add edges where transition probability > 0
+            G.add_edge(states[i], states[j], weight=P[i, j])
+
+# now we draw the graph
+plt.figure(figsize=(8, 5))
+pos = nx.spring_layout(G, seed=42)
+edges = G.edges(data=True)
+
+nx.draw(G, pos, with_labels=True, node_size=3000, node_color="lightblue", edge_color="gray", font_size=10)
+edge_labels = {(u, v): f"{d['weight']:.2f}" for u, v, d in edges}
+nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=10)
+
+plt.title("Markov Chain for Borrower Classification")
+plt.show()
+
+print("\nSuper Simple Explanation:")
+print("Imagine three playgrounds: Mud, Grass, and Castle.")
+print("- If a kid is in the Mud Playground, they usually stay there (90% chance), but sometimes they clean up and move to the Grass Playground (10% chance).")
+print("- If a kid is in the Grass Playground, they might get messy and go back to Mud (20% chance), stay in Grass (65% chance), or behave super well and move to the Castle Playground (15% chance).")
+print("- If a kid is in the Castle Playground, they mostly stay there (85% chance), but they might get too wild and move back to Grass (10% chance), or even all the way to Mud (5% chance).")
+print("The bank is like a teacher, watching where kids go and guessing where they might end up tomorrow!")
+
+import numpy as np
+import pandas as pd
+print("Question 3b")
+
+def rouwenhorst(N, p):
+    """Generate Rouwenhorst transition matrix for AR(1) process."""
+    if N == 2:
+        return np.array([[p, 1 - p], [1 - p, p]])
+
+    # Recursively compute P_(N-1)
+    P_prev = rouwenhorst(N - 1, p)
+
+    # Create a new zero matrix for expansion
+    P_new = np.zeros((N, N))
+
+    # Fill in the expanded transition matrix
+    P_new[:-1, :-1] += p * P_prev  # Top-left block
+    P_new[:-1, 1:] += (1 - p) * P_prev  # Top-right block
+    P_new[1:, :-1] += (1 - p) * P_prev  # Bottom-left block
+    P_new[1:, 1:] += p * P_prev  # Bottom-right block
+
+    # Adjust middle rows to ensure valid probabilities
+    P_new[1:-1, :] /= 2
+
+    return P_new
+
+# finally, we have
+N = 7  # Number of states
+gamma_1 = 0.85
+p = (1 + gamma_1) / 2
+
+
+transition_matrix = rouwenhorst(N, p)
+
+
+df_matrix = pd.DataFrame(transition_matrix)
+
+
+print("Fixed Transition Matrix (γ₁ = 0.85):")
+print(df_matrix)
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+print("3c")
+# we got the states at 7
+N = 7
+gamma_1 = 0.85
+p = (1 + gamma_1) / 2
+
+def rouwenhorst(N, p):
+    """Generate Rouwenhorst transition matrix for AR(1) process."""
+    if N == 2:
+        return np.array([[p, 1 - p], [1 - p, p]])
+
+    # Recursively compute P_(N-1)
+    P_prev = rouwenhorst(N - 1, p)
+
+    # for new zero matrix:
+    P_new = np.zeros((N, N))
+
+    # Fill in the expanded transition matrix
+    P_new[:-1, :-1] += p * P_prev  # Top-left block
+    P_new[:-1, 1:] += (1 - p) * P_prev  # Top-right block
+    P_new[1:, :-1] += (1 - p) * P_prev  # Bottom-left block
+    P_new[1:, 1:] += p * P_prev  # Bottom-right block
+
+    # Adjust middle rows to ensure valid probabilities
+    P_new[1:-1, :] /= 2
+
+    return P_new
+
+
+transition_matrix = rouwenhorst(N, p)
+
+# Define state space (grid of discretized AR(1) values)
+m = np.sqrt(N - 1)
+sigma = np.sqrt(1 / (1 - gamma_1**2))
+states = np.linspace(-m * sigma, m * sigma, N)
+
+# Set seed
+np.random.seed(2025)
+
+# Simulate Markov Chain
+T = 50
+state_index = np.random.choice(N, p=np.ones(N) / N)  # Start uniformly
+simulated_states = [states[state_index]]
+
+for _ in range(T - 1):
+    transition_probs = transition_matrix[state_index]  # Get transition probabilities
+    transition_probs /= transition_probs.sum()  # Ensure proper probability distribution
+    state_index = np.random.choice(N, p=transition_probs)  # Sample next state
+    simulated_states.append(states[state_index])
+
+# Plot results
+plt.figure(figsize=(10, 5))
+plt.plot(range(T), simulated_states, marker='o', linestyle='-')
+plt.title("Simulated Markov Chain for AR(1) (γ₁ = 0.85)")
+plt.xlabel("Time")
+plt.ylabel("State Value")
+plt.grid(True)
+plt.show()
+
+# Define the cost functions
+import numpy as np
+
+print("Question 4a")
+def maintenance_cost(z):
+    """Maintenance cost as a function of tank age."""
+    return 1000 + 200 * z  # Example: Increases linearly with age
+
+def breakdown_cost(z):
+    """Breakdown cost, assuming older tanks break down more often."""
+    breakdown_prob = min(0.05 * z, 1)  # Example: Probability of breakdown increases with age
+    return breakdown_prob * 5000  # Expected cost of breakdown
+
+def operational_cost(z):
+    """Total operational cost including maintenance and breakdown costs."""
+    return maintenance_cost(z) + breakdown_cost(z)
+
+# Define the cost of a new tank
+D_t = 50000  # Fixed purchase cost of a new tank
+
+def per_period_utility(z, replace=False):
+    """Per-period utility function of the military."""
+    cost = operational_cost(z) if not replace else (D_t + operational_cost(0))
+    return -cost  # Assuming utility is negative cost
+
+
+# Example usage
+ages = np.arange(0, 20, 1)  # Tank ages from 0 to 19 years
+utilities = [per_period_utility(z) for z in ages]
+
+import matplotlib.pyplot as plt
+plt.plot(ages, utilities, label='Per-Period Utility')
+plt.xlabel('Tank Age (years)')
+plt.ylabel('Utility (negative cost)')
+plt.title('Per-Period Utility Function of the Military')
+plt.legend()
+plt.show()
+print("The graph basically shows that as tanks get older, they become more expensive to keep running. The utility (which we define as negative cost) drops, meaning the military is spending more and more on maintenance and breakdowns. If the utility gets too low, it probably makes more sense to buy a new tank rather than keep fixing an old one. It's a classic fix it or replace it situation")
+
+# Define the cost functions
+import numpy as np
+
+print("Question 4a")
+def maintenance_cost(z):
+    """Maintenance cost as a function of tank age."""
+    return 1000 + 200 * z  # Example: Increases linearly with age
+
+def breakdown_cost(z):
+    """Breakdown cost, assuming older tanks break down more often."""
+    breakdown_prob = min(0.05 * z, 1)  # Example: Probability of breakdown increases with age
+    return breakdown_prob * 5000  # Expected cost of breakdown
+
+def operational_cost(z):
+    """Total operational cost including maintenance and breakdown costs."""
+    return maintenance_cost(z) + breakdown_cost(z)
+
+# Define the cost of a new tank
+D_t = 50000  # Fixed purchase cost of a new tank
+
+def per_period_utility(z, replace=False):
+    """Per-period utility function of the military."""
+    cost = operational_cost(z) if not replace else (D_t + operational_cost(0))
+    return -cost  # Assuming utility is negative cost
+
+# Example usage
+ages = np.arange(0, 20, 1)  # Tank ages from 0 to 19 years
+utilities = [per_period_utility(z) for z in ages]
+
+import matplotlib.pyplot as plt
+plt.plot(ages, utilities, label='Per-Period Utility')
+plt.xlabel('Tank Age (years)')
+plt.ylabel('Utility (negative cost)')
+plt.title('Per-Period Utility Function of the Military')
+plt.legend()
+plt.show()
+print("The graph basically shows that as tanks get older, they become more expensive to keep running. The utility (which we define as negative cost) drops, meaning the military is spending more and more on maintenance and breakdowns. If the utility gets too low, it probably makes more sense to buy a new tank rather than keep fixing an old one. It's a classic fix it or replace it situation")
+
+# Define the cost functions
+import numpy as np
+print("4b")
+
+def maintenance_cost(z):
+    """Maintenance cost as a function of tank age."""
+    return 1000 + 200 * z  # Example: Increases linearly with age
+
+def breakdown_cost(z):
+    """Breakdown cost, assuming older tanks break down more often."""
+    breakdown_prob = min(0.05 * z, 1)  # Example: Probability of breakdown increases with age
+    return breakdown_prob * 5000  # Expected cost of breakdown
+
+def operational_cost(z):
+    """Total operational cost including maintenance and breakdown costs."""
+    return maintenance_cost(z) + breakdown_cost(z)
+
+# Define the cost of a new tank
+D_t = 50000  # Fixed purchase cost of a new tank
+
+def per_period_utility(z, replace=False):
+    """Per-period utility function of the military."""
+    cost = operational_cost(z) if not replace else (D_t + operational_cost(0))
+    return -cost  # Assuming utility is negative cost
+
+def bellman_equation(V, z, beta=0.95):
+    """Bellman equation for the military's optimization problem."""
+
+    # Utility of keeping the current tank
+    keep_tank = per_period_utility(z) + beta * V(z + 1)
+
+    # Utility of replacing the tank (resetting age to 0)
+    replace_tank = per_period_utility(0, replace=True) + beta * V(0)
+
+    # Return the optimal choice
+    return max(keep_tank, replace_tank)
+
+# Example usage
+ages = np.arange(0, 20, 1)  # Tank ages from 0 to 19 years
+utilities = [per_period_utility(z) for z in ages]
+
+import matplotlib.pyplot as plt
+plt.plot(ages, utilities, label='Per-Period Utility')
+plt.xlabel('Tank Age (years)')
+plt.ylabel('Utility (negative cost)')
+plt.title('Per-Period Utility Function of the Military')
+plt.legend()
+plt.show()
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Parameters
+z_max = 10  # Maximum tank age before replacement is very likely
+p_normal = 0.8  # Probability the tank functions normally
+q_breakdown = 0.2  # Probability of a breakdown
+replacement_threshold = 8  # Military replaces the tank if age >= threshold
+
+# Function to describe transition in words
+def describe_transition(z_t, decision):
+    if decision == "replace":
+        return f"At age {z_t}, the military replaces the tank. Next age: 0."
+    elif np.random.rand() < p_normal:
+        return f"At age {z_t}, the tank continues functioning. Next age: {min(z_t + 1, z_max)}."
+    else:
+        return f"At age {z_t}, the tank breaks down. Next age: 0 (replacement)."
+
+# Simulate transitions for different ages
+for z in range(z_max + 1):
+    if z >= replacement_threshold:
+        decision = "replace"
+    else:
+        decision = "keep"
+    
+    print(describe_transition(z, decision))
+
+# Transition Probability Matrix
+P = np.zeros((z_max + 1, z_max + 1))
+for z in range(z_max + 1):
+    if z >= replacement_threshold:
+        P[z, 0] = 1.0  # Replacement
+    else:
+        P[z, z + 1 if z + 1 <= z_max else z] = p_normal  # Aging
+        P[z, 0] = q_breakdown  # Breakdown and replacement
+
+# Visualization
+plt.imshow(P, cmap="Blues", aspect="auto")
+plt.colorbar(label="Transition Probability")
+plt.xlabel("Next Age (z_t+1)")
+plt.ylabel("Current Age (z_t)")
+plt.title("Transition Probability Matrix for Tank Age")
+plt.show()
+
+# Print matrix
+print("Transition Probability Matrix:")
+print(P.round(2))
+
+# Description of transition probabilities
+print("\nExplanation of Transition Probabilities:")
+print("1. If the tank is maintained, it ages with probability", p_normal, "(z_{t+1} = z_t + 1).")
+print("2. With probability", q_breakdown, "the tank breaks down and is replaced (z_{t+1} = 0).")
+print("3. If the tank reaches age", replacement_threshold, "or more, it is replaced (z_{t+1} = 0).")
+
